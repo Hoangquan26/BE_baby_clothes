@@ -4,6 +4,10 @@ import { AuthController } from './auth.controller';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule, JwtModuleOptions, JwtSignOptions } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { PrismaModule } from 'src/prisma/prisma.module';
+import { UserModule } from 'src/user/user.module';
+import { SessionService } from './session.service';
+import { AuthGuard } from 'src/common/guard/auth/auth.guard';
 
 @Module({
   imports: [
@@ -24,8 +28,12 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         };
       },
     }),
+    PrismaModule,
+    UserModule,
+    ConfigModule
   ],
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [AuthService, SessionService, AuthGuard],
+  exports: [AuthGuard],
 })
 export class AuthModule {}

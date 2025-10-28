@@ -7,7 +7,6 @@ export class AppController {
 
   @Get()
   getHello(): string {
-    Logger.error('Hello')
     return this.appService.getHello();
   }
 }

@@ -1,0 +1,689 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ==============================
+// ENUMS
+// ==============================
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PAID
+  FULFILLING
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  REFUNDED
+  PARTIAL_REFUND
+}
+
+enum FulfillmentStatus {
+  UNFULFILLED
+  PARTIAL
+  FULFILLED
+  RETURNED
+}
+
+enum CouponType {
+  PERCENT
+  FIXED
+}
+
+enum ShipmentStatus {
+  PENDING
+  PICKED
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
+enum StockMoveDirection {
+  IN
+  OUT
+  ADJUST
+}
+
+enum NotificationChannel {
+  WEB
+  EMAIL
+  PUSH
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  CRITICAL
+}
+
+// ==============================
+// SYSTEM / RBAC / SESSIONS
+// ==============================
+model User {
+  id           String    @id @db.VarChar(26) @default(cuid())
+  email        String    @unique @db.VarChar(255)
+  username     String?   @unique @db.VarChar(50)
+  passwordHash String    @db.VarChar(255)
+  fullName     String?   @db.VarChar(255)
+  phone        String?   @db.VarChar(32)
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  roles                UserRole[]
+  sessions             UserSession[]
+  addresses            Address[]
+  carts                Cart[]
+  wishlists            Wishlist[]
+  orders               Order[]
+  couponRedemptions    CouponRedemption[]
+  reviews              Review[]
+  auditLogs            AuditLog[]
+  stockMoves           StockMove[]        @relation("StockMoveByUser")
+  notifications        NotificationUser[]
+  createdNotifications Notification[]     @relation("NotificationCreatedBy")
+
+  @@index([isActive])
+  @@index([createdAt])
+}
+
+model Role {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique @db.VarChar(64) // admin, staff, customer
+  name      String   @db.VarChar(128)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  permissions   RolePermission[]
+  users         UserRole[]
+  notifications Notification[]
+}
+
+model Permission {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique @db.VarChar(128) // product.read, order.manage, ...
+  name      String   @db.VarChar(255)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  roles RolePermission[]
+}
+
+model RolePermission {
+  roleId       Int
+  permissionId Int
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+}
+
+model UserRole {
+  userId String @db.VarChar(26)
+  roleId Int
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@index([roleId])
+}
+
+model UserSession {
+  id            String   @id @db.VarChar(26)
+  userId        String   @db.VarChar(26)
+  userAgent     String?  @db.VarChar(255)
+  ipAddress     Bytes? // INET6
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+  rfTokenHashed String?
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// ==============================
+// ADDRESS BOOK
+// ==============================
+model Address {
+  id                Int      @id @default(autoincrement())
+  userId            String   @db.VarChar(26)
+  label             String?  @db.VarChar(64)
+  fullName          String   @db.VarChar(255)
+  phone             String   @db.VarChar(32)
+  country           String   @db.VarChar(64)
+  province          String   @db.VarChar(128)
+  district          String   @db.VarChar(128)
+  ward              String?  @db.VarChar(128)
+  addressLine1      String   @db.VarChar(255)
+  addressLine2      String?  @db.VarChar(255)
+  postalCode        String?  @db.VarChar(32)
+  isDefaultShipping Boolean  @default(false)
+  isDefaultBilling  Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isDefaultShipping])
+  @@index([userId, isDefaultBilling])
+}
+
+// ==============================
+// MEDIA
+// ==============================
+model Media {
+  id        Int      @id @default(autoincrement())
+  url       String   @db.VarChar(1024)
+  altText   String?  @db.VarChar(255)
+  mimeType  String?  @db.VarChar(100)
+  width     Int?
+  height    Int?
+  createdAt DateTime @default(now())
+
+  productThumbOf Product[]
+  productImages  ProductImage[]
+
+  @@index([mimeType])
+}
+
+// ==============================
+// CATALOG: CATEGORY → PRODUCT → VARIANT
+// ==============================
+model Category {
+  id          Int      @id @default(autoincrement())
+  parentId    Int?
+  slug        String   @unique @db.VarChar(128)
+  name        String   @db.VarChar(255)
+  description String?
+  position    Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  parent   Category?  @relation("CategoryToParent", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryToParent")
+  products Product[]
+
+  @@index([parentId])
+  @@index([isActive, position])
+}
+
+model Product {
+  id           String    @id @db.VarChar(26)
+  sku          String?   @unique @db.VarChar(64)
+  slug         String    @unique @db.VarChar(160)
+  name         String    @db.VarChar(255)
+  subtitle     String?   @db.VarChar(255)
+  description  String?
+  brand        String?   @db.VarChar(128)
+  categoryId   Int?
+  thumbMediaId Int?
+  isPublished  Boolean   @default(false)
+  publishedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  category      Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  thumb         Media?           @relation(fields: [thumbMediaId], references: [id], onDelete: SetNull)
+  images        ProductImage[]
+  variants      ProductVariant[]
+  orderItems    OrderItem[]
+  reviews       Review[]
+  wishlistItems WishlistItem[]
+
+  @@index([categoryId, isPublished])
+  @@index([name])
+  @@index([subtitle])
+}
+
+model ProductImage {
+  productId String
+  mediaId   Int
+  position  Int    @default(0)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  media   Media   @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@id([productId, mediaId])
+  @@index([mediaId])
+  @@index([productId, position])
+}
+
+model Option {
+  id   Int    @id @default(autoincrement())
+  name String @db.VarChar(128)
+  slug String @unique @db.VarChar(128)
+
+  values        OptionValue[]
+  variantValues VariantOptionValue[]
+}
+
+model OptionValue {
+  id       Int    @id @default(autoincrement())
+  optionId Int
+  value    String @db.VarChar(128)
+  slug     String @db.VarChar(128)
+
+  option Option @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  variantValues VariantOptionValue[]
+
+  @@unique([optionId, slug])
+  @@index([optionId])
+}
+
+model ProductVariant {
+  id             String   @id @db.VarChar(26)
+  productId      String   @db.VarChar(26)
+  sku            String   @unique @db.VarChar(64)
+  barcode        String?  @db.VarChar(64)
+  price          Decimal  @db.Decimal(18, 2)
+  compareAtPrice Decimal? @db.Decimal(18, 2)
+  weightGrams    Int?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  product    Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  options    VariantOptionValue[]
+  inventory  Inventory[]
+  stockMoves StockMove[]
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+
+  @@index([productId, isActive])
+}
+
+model VariantOptionValue {
+  variantId     String @db.VarChar(26)
+  optionId      Int
+  optionValueId Int
+
+  variant     ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  option      Option         @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  optionValue OptionValue    @relation(fields: [optionValueId], references: [id], onDelete: Cascade)
+
+  @@id([variantId, optionId])
+  @@index([optionId])
+  @@index([optionValueId])
+}
+
+// ==============================
+// INVENTORY
+// ==============================
+model Warehouse {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique @db.VarChar(64)
+  name      String   @db.VarChar(255)
+  address   String?  @db.VarChar(255)
+  createdAt DateTime @default(now())
+
+  inventory  Inventory[]
+  stockMoves StockMove[]
+}
+
+model Inventory {
+  warehouseId Int
+  variantId   String  @db.VarChar(26)
+  qtyOnHand   Decimal @default(0) @db.Decimal(18, 3)
+  qtyReserved Decimal @default(0) @db.Decimal(18, 3)
+
+  warehouse Warehouse      @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@id([warehouseId, variantId])
+  @@index([variantId])
+}
+
+model StockMove {
+  id          Int                @id @default(autoincrement())
+  warehouseId Int
+  variantId   String             @db.VarChar(26)
+  direction   StockMoveDirection
+  quantity    Decimal            @db.Decimal(18, 3)
+  reason      String?            @db.VarChar(255)
+  referenceId String?            @db.VarChar(64)
+  createdById String?            @db.VarChar(26)
+  createdAt   DateTime           @default(now())
+
+  warehouse Warehouse      @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  createdBy User?          @relation("StockMoveByUser", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([variantId, createdAt])
+  @@index([referenceId])
+}
+
+// ==============================
+// CART & WISHLIST
+// ==============================
+model Cart {
+  id        String   @id @db.VarChar(26)
+  userId    String?  @db.VarChar(26)
+  currency  String   @default("VND") @db.Char(3)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  items CartItem[]
+
+  @@index([userId])
+}
+
+model CartItem {
+  id            Int      @id @default(autoincrement())
+  cartId        String   @db.VarChar(26)
+  variantId     String   @db.VarChar(26)
+  quantity      Decimal  @db.Decimal(18, 3)
+  priceSnapshot Decimal  @db.Decimal(18, 2)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  cart    Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+
+  @@unique([cartId, variantId])
+  @@index([variantId])
+}
+
+model Wishlist {
+  id        String   @id @db.VarChar(26)
+  userId    String   @db.VarChar(26)
+  name      String   @default("Default") @db.VarChar(255)
+  isPublic  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items WishlistItem[]
+
+  @@index([userId])
+}
+
+model WishlistItem {
+  wishlistId String   @db.VarChar(26)
+  productId  String   @db.VarChar(26)
+  addedAt    DateTime @default(now())
+
+  wishlist Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([wishlistId, productId])
+  @@index([productId])
+}
+
+// ==============================
+// COUPON / PROMOTION
+// ==============================
+model Coupon {
+  id            String     @id @db.VarChar(26)
+  code          String     @unique @db.VarChar(64)
+  type          CouponType
+  value         Decimal    @db.Decimal(18, 2)
+  maxDiscount   Decimal?   @db.Decimal(18, 2)
+  minOrderTotal Decimal?   @db.Decimal(18, 2)
+  usageLimit    Int?
+  perUserLimit  Int?
+  startsAt      DateTime?
+  endsAt        DateTime?
+  isActive      Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+
+  orders      OrderCoupon[]
+  redemptions CouponRedemption[]
+
+  @@index([isActive, startsAt, endsAt])
+}
+
+model CouponRedemption {
+  id        Int      @id @default(autoincrement())
+  couponId  String   @db.VarChar(26)
+  userId    String?  @db.VarChar(26)
+  orderId   String?  @db.VarChar(26)
+  createdAt DateTime @default(now())
+
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  order  Order? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([couponId])
+  @@index([userId])
+  @@index([orderId])
+}
+
+// ==============================
+// ORDER / PAYMENT / SHIPMENT
+// ==============================
+model Order {
+  id                String            @id @db.VarChar(26)
+  userId            String?           @db.VarChar(26)
+  status            OrderStatus       @default(PENDING)
+  paymentStatus     PaymentStatus     @default(UNPAID)
+  fulfillmentStatus FulfillmentStatus @default(UNFULFILLED)
+  currency          String            @default("VND") @db.Char(3)
+  subtotalAmount    Decimal           @default(0) @db.Decimal(18, 2)
+  discountAmount    Decimal           @default(0) @db.Decimal(18, 2)
+  shippingAmount    Decimal           @default(0) @db.Decimal(18, 2)
+  taxAmount         Decimal           @default(0) @db.Decimal(18, 2)
+  totalAmount       Decimal           @db.Decimal(18, 2)
+  couponCode        String?           @db.VarChar(64)
+  notes             String?           @db.VarChar(1024)
+
+  shipFullName     String? @db.VarChar(255)
+  shipPhone        String? @db.VarChar(32)
+  shipCountry      String? @db.VarChar(64)
+  shipProvince     String? @db.VarChar(128)
+  shipDistrict     String? @db.VarChar(128)
+  shipWard         String? @db.VarChar(128)
+  shipAddressLine1 String? @db.VarChar(255)
+  shipAddressLine2 String? @db.VarChar(255)
+  shipPostalCode   String? @db.VarChar(32)
+
+  billFullName     String? @db.VarChar(255)
+  billPhone        String? @db.VarChar(32)
+  billCountry      String? @db.VarChar(64)
+  billProvince     String? @db.VarChar(128)
+  billDistrict     String? @db.VarChar(128)
+  billWard         String? @db.VarChar(128)
+  billAddressLine1 String? @db.VarChar(255)
+  billAddressLine2 String? @db.VarChar(255)
+  billPostalCode   String? @db.VarChar(32)
+
+  placedAt    DateTime  @default(now())
+  paidAt      DateTime?
+  cancelledAt DateTime?
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user              User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  items             OrderItem[]
+  payments          Payment[]
+  shipments         Shipment[]
+  coupons           OrderCoupon[]
+  couponRedemptions CouponRedemption[]
+
+  @@index([userId, placedAt])
+  @@index([status])
+  @@index([couponCode])
+}
+
+model OrderItem {
+  id             Int      @id @default(autoincrement())
+  orderId        String   @db.VarChar(26)
+  productId      String   @db.VarChar(26)
+  variantId      String?  @db.VarChar(26)
+  productName    String   @db.VarChar(255)
+  variantSku     String?  @db.VarChar(64)
+  quantity       Decimal  @db.Decimal(18, 3)
+  unitPrice      Decimal  @db.Decimal(18, 2)
+  discountAmount Decimal  @default(0) @db.Decimal(18, 2)
+  totalAmount    Decimal  @db.Decimal(18, 2)
+  createdAt      DateTime @default(now())
+
+  order   Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
+  variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([variantId])
+}
+
+model Payment {
+  id             String    @id @db.VarChar(26)
+  orderId        String    @db.VarChar(26)
+  provider       String    @db.VarChar(64) // VNPAY, MOMO, COD, STRIPE...
+  method         String    @db.VarChar(64) // CARD, BANK_TRANSFER, COD...
+  amount         Decimal   @db.Decimal(18, 2)
+  currency       String    @default("VND") @db.Char(3)
+  status         String    @default("PENDING") @db.VarChar(32) // linh hoạt: PENDING, AUTHORIZED, CAPTURED, FAILED, REFUNDED, CANCELLED
+  transactionRef String?   @db.VarChar(255)
+  paidAt         DateTime?
+  rawPayload     Json?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, status])
+  @@index([transactionRef])
+}
+
+model Shipment {
+  id          String         @id @db.VarChar(26)
+  orderId     String         @db.VarChar(26)
+  carrier     String         @db.VarChar(64) // GHN, GHTK...
+  service     String?        @db.VarChar(128)
+  trackingNo  String?        @db.VarChar(128)
+  status      ShipmentStatus @default(PENDING)
+  shippedAt   DateTime?
+  deliveredAt DateTime?
+  rawPayload  Json?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([trackingNo])
+}
+
+model OrderCoupon {
+  orderId  String @db.VarChar(26)
+  couponId String @db.VarChar(26)
+
+  order  Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Restrict)
+
+  @@id([orderId, couponId])
+  @@index([couponId])
+}
+
+// ==============================
+// REVIEWS / RATINGS
+// ==============================
+model Review {
+  id         Int      @id @default(autoincrement())
+  productId  String   @db.VarChar(26)
+  userId     String   @db.VarChar(26)
+  rating     Int
+  title      String?  @db.VarChar(255)
+  content    String?
+  isApproved Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, userId])
+  @@index([productId, isApproved, createdAt])
+}
+
+// ==============================
+// AUDIT LOG
+// ==============================
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  userId     String?  @db.VarChar(26)
+  action     String   @db.VarChar(128) // "order.create", "product.update"...
+  targetType String   @db.VarChar(64) // "order", "product", "user"...
+  targetId   String   @db.VarChar(64)
+  metadata   Json?
+  ipAddress  Bytes?
+  userAgent  String?  @db.VarChar(255)
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([targetType, targetId])
+  @@index([userId, createdAt])
+}
+
+// ==============================
+// NOTIFICATIONS (Thông báo)
+// ==============================
+// Mục tiêu: hỗ trợ broadcast (toàn hệ thống), theo vai trò, hoặc theo người dùng,
+// track trạng thái gửi/đọc theo từng user, đa kênh (WEB/EMAIL/PUSH) và độ ưu tiên.
+
+model Notification {
+  id          String               @id @db.VarChar(26)
+  title       String               @db.VarChar(255)
+  body        String?
+  channel     NotificationChannel  @default(WEB)
+  priority    NotificationPriority @default(NORMAL)
+  data        Json? // payload tuỳ chỉnh (deeplink, entity ref)
+  // audience: nếu null = broadcast
+  roleId      Int? // gửi tới tất cả user có roleId (tuỳ chọn)
+  createdById String?              @db.VarChar(26)
+  scheduledAt DateTime?
+  publishedAt DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime             @default(now())
+
+  createdBy User? @relation("NotificationCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  role      Role? @relation(fields: [roleId], references: [id], onDelete: SetNull)
+
+  deliveries NotificationUser[]
+
+  @@index([roleId])
+  @@index([scheduledAt])
+  @@index([publishedAt])
+  @@index([expiresAt])
+  @@index([priority, channel])
+}
+
+model NotificationUser {
+  notificationId String    @db.VarChar(26)
+  userId         String    @db.VarChar(26)
+  // trạng thái per-user
+  deliveredAt    DateTime?
+  readAt         DateTime?
+  dismissedAt    DateTime?
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([notificationId, userId])
+  @@index([userId, readAt])
+  @@index([userId, deliveredAt])
+}
