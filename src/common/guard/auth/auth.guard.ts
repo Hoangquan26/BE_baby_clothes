@@ -8,13 +8,10 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
 import { UserService } from 'src/user/user.service';
-import { AUTH_PAYLOAD_SELECT } from 'src/auth/auth.constant';
+import { AUTH_PAYLOAD_SELECT, JwtAuthPayload } from 'src/auth/auth.constant';
 import { SessionService } from 'src/auth/session.service';
+import { extractTokenFromHeader } from 'src/common/utils/request.util';
 
-type JwtAuthPayload = AUTH_PAYLOAD_SELECT & {
-  exp?: number;
-  iat?: number;
-};
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -27,7 +24,7 @@ export class AuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
-    const token = this.extractTokenFromHeader(request);
+    const token = extractTokenFromHeader(request);
 
     if (!token) {
       throw new UnauthorizedException('Không tìm thấy token');
@@ -47,20 +44,6 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException('Không thể xác thực người dùng');
     }
 
-    const sessionId = this.extractSessionId(request);
-    if (sessionId) {
-      const isActive = await this.sessionService.isSessionActive(
-        sessionId,
-        user.id,
-      );
-
-      if (!isActive) {
-        throw new UnauthorizedException('Phiên đăng nhập không hợp lệ');
-      }
-      (request as any).refreshToken =  request.cookies['refreshToken']
-      (request as any).sessionId = sessionId;
-    }
-
     (request as any).user = {
       ...user,
       tokenExpiresAt:
@@ -72,30 +55,5 @@ export class AuthGuard implements CanActivate {
     return true;
   }
 
-  private extractTokenFromHeader(request: Request): string | null {
-    const authorization = request.headers['authorization'];
-    if (typeof authorization !== 'string') {
-      return null;
-    }
-
-    const [type, token] = authorization.split(' ');
-    if (type?.toLowerCase() === 'bearer' && token) {
-      return token;
-    }
-
-    return null;
-  }
-
-  private extractSessionId(request: Request): string | null {
-    const sessionHeader = request.headers['x-session-id'];
-    if (typeof sessionHeader === 'string' && sessionHeader.trim().length > 0) {
-      return sessionHeader.trim();
-    }
-
-    if (Array.isArray(sessionHeader) && sessionHeader.length > 0) {
-      return sessionHeader[0];
-    }
-
-    return null;
-  }
+  
 }

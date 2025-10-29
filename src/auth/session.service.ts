@@ -43,13 +43,13 @@ export class SessionService {
     });
   }
 
-  async validateRefreshToken(sessionId: string, refreshToken: string) {
+  async validateRefreshToken(sessionId: string, refreshToken: string, userId: string) {
     if (!sessionId || !refreshToken) {
       return null;
     }
 
     const session = await this.prisma.userSession.findUnique({
-      where: { id: sessionId },
+      where: { id: sessionId, userId },
     });
 
     if (!session) {
@@ -64,7 +64,9 @@ export class SessionService {
     if (!isValid) {
       return null;
     }
-
+    console.log(session)
+    console.log(`log::: ${refreshToken}`)
+    console.log(`log::: ${isValid}`)
     return session;
   }
 
@@ -74,7 +76,9 @@ export class SessionService {
     expiresAt: Date,
     saltRounds: number,
   ) {
+    console.log(`saverf:::${refreshToken}`)
     const refreshTokenHashed = await bcrypt.hash(refreshToken, saltRounds);
+    console.log(`saverf:::${refreshTokenHashed}`)
 
     return this.prisma.userSession.update({
       where: { id: sessionId },

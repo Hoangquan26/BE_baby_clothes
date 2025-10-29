@@ -1,4 +1,5 @@
 import { IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { User } from 'generated/prisma';
 
 export class RefreshTokenDto {
   @IsString()
@@ -10,4 +11,6 @@ export class RefreshTokenDto {
   @IsNotEmpty()
   @MinLength(10)
   refreshToken: string;
+
+  user: Partial<User>
 }

@@ -14,6 +14,7 @@ import { AUTH_PAYLOAD_SELECT } from './auth.constant';
 import { SessionService } from './session.service';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { GetUserInfoDTO } from './dto/get-user-info.dto';
+import { randomUUID } from 'crypto';
 
 export type LoginSuccessResponse = {
   tokenType: 'Bearer';
@@ -126,7 +127,6 @@ export class AuthService {
         response.sessionExpiresAt = session.expiresAt.toISOString();
       }
     }
-
     return response;
   }
 
@@ -160,22 +160,17 @@ export class AuthService {
   async refreshToken(
     refreshTokenDto: RefreshTokenDto,
   ): Promise<LoginSuccessResponse> {
-    const { refreshToken, sessionId } = refreshTokenDto;
+    const { refreshToken, sessionId, user } = refreshTokenDto;
 
     const session = await this.sessionService.validateRefreshToken(
       sessionId,
       refreshToken,
+      user.id
     );
 
     if (!session) {
       await this.sessionService.deleteSession(sessionId);
       throw new UnauthorizedException('Token không hợp lệ');
-    }
-
-    const user = await this.userService.findSafeUserById(session.userId);
-    if (!user || !user.isActive) {
-      await this.sessionService.deleteSession(sessionId);
-      throw new UnauthorizedException('Tài khoản không khả dụng');
     }
 
     const payload = this.buildAuthPayload(user.id, user.username ?? user.email);
@@ -254,6 +249,7 @@ export class AuthService {
     const refreshTokenPromise = this.jwtService.signAsync(payload, {
       secret: this.refreshTokenSecret,
       expiresIn: this.refreshTokenExpiresIn,
+      jwtid: randomUUID(),
     });
 
     const [accessToken, refreshToken] = await Promise.all([

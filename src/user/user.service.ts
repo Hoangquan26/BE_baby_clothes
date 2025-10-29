@@ -3,18 +3,23 @@ import {
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { Prisma } from 'generated/prisma';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { FindUserByEmailDTO } from './dto/find-user-by-email.dto';
 import { FindUserByBothEmailAndUsername } from './dto/find-user-by-both-email-and-username.dto';
 import { CreateUserDTO } from './dto/create-user.dto';
 import { FindUserByUsernameDTO } from './dto/find-user-by-username.dto';
 import { emailRegex } from 'src/common/utils/reggex.util';
+import { Prisma } from 'generated/prisma';
+import { UserRoleService } from 'src/user-role/user-role.service';
+import { UserRoleIDS } from 'src/user-role/user-role.constant';
 
 @Injectable()
 export class UserService {
-  constructor(private prisma: PrismaService) {}
-
+  constructor(
+    private prisma: PrismaService,
+    private userRole: UserRoleService
+  ) {}
+  private readonly defaultRegisterRole = UserRoleIDS.CUSTOMER
   private readonly safeUserSelect: Prisma.UserSelect = Object.freeze({
     id: true,
     email: true,
@@ -126,10 +131,15 @@ export class UserService {
     };
 
     try {
-      return await this.prisma.user.create({
+      const newUser = await this.prisma.user.create({
         data,
         select: this.safeUserSelect,
       });
+      const newUserRole = await this.userRole.create({
+        userId: newUser.id,
+        roleId: this.defaultRegisterRole
+      })
+      return newUser
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&

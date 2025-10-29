@@ -8,6 +8,7 @@ import { PrismaModule } from 'src/prisma/prisma.module';
 import { UserModule } from 'src/user/user.module';
 import { SessionService } from './session.service';
 import { AuthGuard } from 'src/common/guard/auth/auth.guard';
+import { RefreshTokenGuard } from 'src/common/guard/auth/refresh-token.guard';
 
 @Module({
   imports: [
@@ -33,7 +34,7 @@ import { AuthGuard } from 'src/common/guard/auth/auth.guard';
     ConfigModule
   ],
   controllers: [AuthController],
-  providers: [AuthService, SessionService, AuthGuard],
-  exports: [AuthGuard],
+  providers: [AuthService, SessionService, AuthGuard, RefreshTokenGuard],
+  exports: [AuthGuard, RefreshTokenGuard],
 })
 export class AuthModule {}
