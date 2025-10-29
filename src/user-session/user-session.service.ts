@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { GetListSessionDTO } from '../auth/dto/get-list-session.dto';
+import { Prisma } from '../../generated/prisma';
 
 interface CreateSessionArgs {
   userId: string;
@@ -21,6 +23,38 @@ const SESSION_ID_ALPHABET =
 @Injectable()
 export class SessionService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async getListSession(getListSessionDto: GetListSessionDTO) {
+    const { userId } = getListSessionDto;
+    const defaultLimit = 15;
+
+    const where: Prisma.UserSessionWhereInput = {
+      userId,
+    };
+
+    const [recentSessions, total] = await this.prisma.$transaction([
+      this.prisma.userSession.findMany({
+        where,
+        orderBy: {
+          expiresAt: 'desc',
+        },
+        take: defaultLimit,
+        select: {
+          id: true,
+          userAgent: true,
+          ipAddress: true,
+          createdAt: true,
+          expiresAt: true,
+        },
+      }),
+      this.prisma.userSession.count({ where }),
+    ]);
+
+    return {
+      items: recentSessions,
+      total,
+    };
+  }
 
   async createSession(args: CreateSessionArgs): Promise<SessionSummary> {
     const { userId, refreshToken, expiresAt, userAgent, saltRounds } = args;
@@ -64,9 +98,6 @@ export class SessionService {
     if (!isValid) {
       return null;
     }
-    console.log(session)
-    console.log(`log::: ${refreshToken}`)
-    console.log(`log::: ${isValid}`)
     return session;
   }
 
@@ -76,9 +107,7 @@ export class SessionService {
     expiresAt: Date,
     saltRounds: number,
   ) {
-    console.log(`saverf:::${refreshToken}`)
     const refreshTokenHashed = await bcrypt.hash(refreshToken, saltRounds);
-    console.log(`saverf:::${refreshTokenHashed}`)
 
     return this.prisma.userSession.update({
       where: { id: sessionId },

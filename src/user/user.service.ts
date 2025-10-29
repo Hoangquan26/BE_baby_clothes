@@ -38,6 +38,7 @@ export class UserService {
     passwordHash: true,
     isActive: true,
     lastLoginAt: true,
+    fullName: true,
   });
 
   async findUserByEmail(findUserByEmailDto: FindUserByEmailDTO) {

@@ -1,5 +1,6 @@
 import { Transform } from 'class-transformer';
 import { IsBoolean } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 import { IsPassword } from 'src/common/decorator/validators/password.decorator/password.decorator.decorator';
 import { IsUsername } from 'src/common/decorator/validators/username.decorator/username.decorator.decorator';
 
@@ -22,21 +23,37 @@ const toBoolean = (value: unknown): boolean => {
 };
 
 export class LoginAuthDTO {
+  @ApiProperty({
+    description: 'Username or email used for authentication.',
+    example: 'john.doe',
+  })
   @Transform(({ value }) =>
     typeof value === 'string' ? value.trim() : value,
   )
   @IsUsername()
   username: string;
 
+  @ApiProperty({
+    description: 'User password.',
+    example: 'P@ssw0rd1!',
+  })
   @IsPassword()
   password: string;
 
+  @ApiProperty({
+    description:
+      'Enable to receive refresh token & persist the session (remember me).',
+    example: true,
+    default: false,
+    required: false,
+  })
   @Transform(({ value }) => {
     if (value === undefined || value === null || value === '') {
       return false;
     }
     return toBoolean(value);
   })
-  @IsBoolean({ message: 'Trường ghi nhớ đăng nhập chứa giá trị không hợp lệ' })
+  @IsBoolean({ message: 'Remember me must be boolean.' })
   rememberMe: boolean = false;
 }
+

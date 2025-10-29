@@ -78,6 +78,7 @@ describe('AuthController', () => {
     expect(authService.login).toHaveBeenCalledWith(dto, {
       userAgent: 'jest-agent',
     });
+    expect(res.cookie).toHaveBeenCalledWith('x-access-token', 'abc', expect.any(Object));
     expect(res.cookie).toHaveBeenCalledWith('x-refresh-token', 'refresh', expect.any(Object));
     expect(res.cookie).toHaveBeenCalledWith('x-session-id', 'session-1', expect.any(Object));
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('johnsmith'));
@@ -103,19 +104,20 @@ describe('AuthController', () => {
     const req = {
       refreshToken: 'refresh-token',
       sessionId: 'session-1',
-      user: { id: 'user-1', username: 'johnsmith', email: 'user@example.com' },
-    } as unknown as Request & RefreshTokenDto;
+      user: { sub: 'user-1', id: 'user-1', username: 'johnsmith', email: 'user@example.com' },
+    } as unknown as any;
     const expected = { tokenType: 'Bearer', accessToken: 'xyz' };
     authService.refreshToken.mockResolvedValue(expected);
     const logSpy = jest.spyOn((controller as any).logger, 'log');
 
-    const result = await controller.refresh(req);
+    const res = { cookie: jest.fn(), clearCookie: jest.fn() } as unknown as Response;
+    const result = await controller.refresh(req, res);
 
     expect(result).toBe(expected);
     expect(authService.refreshToken).toHaveBeenCalledWith({
       refreshToken: 'refresh-token',
       sessionId: 'session-1',
-      user: { id: 'user-1', username: 'johnsmith', email: 'user@example.com' },
+      user: { sub: 'user-1', id: 'user-1', username: 'johnsmith', email: 'user@example.com' },
     });
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('session-1'));
   });
@@ -140,3 +142,8 @@ describe('AuthController', () => {
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('session-2'));
   });
 });
+
+
+
+
+

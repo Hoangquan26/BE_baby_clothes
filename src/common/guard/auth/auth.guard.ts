@@ -8,8 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
 import { UserService } from 'src/user/user.service';
-import { AUTH_PAYLOAD_SELECT, JwtAuthPayload } from 'src/auth/auth.constant';
-import { SessionService } from 'src/auth/session.service';
+import {  JwtAuthPayload } from 'src/auth/auth.constant';
 import { extractTokenFromHeader } from 'src/common/utils/request.util';
 
 
@@ -19,7 +18,6 @@ export class AuthGuard implements CanActivate {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly userService: UserService,
-    private readonly sessionService: SessionService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {

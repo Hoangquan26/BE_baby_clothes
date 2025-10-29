@@ -1,15 +1,15 @@
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { ApplicationLogger } from './common/logger/logger';
 import { LogInterceptorInterceptor } from './common/interceptors/log.interceptor/log.interceptor.interceptor';
-import { NotfoundFilterFilter } from './common/filters/notfound.filter/notfound.filter.filter';
 import { ValidationPipe } from '@nestjs/common';
-import { ValidationExceptionFilter } from './common/filters/validation-exception.filter/validation-exception.filter';
 import { setupSwagger } from './common/swagger/swagger.config';
 import * as cookieParser from 'cookie-parser';
 import * as compression from 'compression'
 import helmet from 'helmet'
+import { GlobalHttpExceptionFilter } from './common/filters/http-exception.filter/http-exception.filter.filter';
+import { ResponseInterceptorInterceptor } from './common/interceptors/response.interceptor/response.interceptor.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -17,11 +17,10 @@ async function bootstrap() {
   });
   const config = app.get(ConfigService);
   const port = config.get<number>('app.port', { infer: true });
-
-  app.useGlobalInterceptors(new LogInterceptorInterceptor());
+  const reflector = app.get(Reflector)
+  app.useGlobalInterceptors(new LogInterceptorInterceptor(), new ResponseInterceptorInterceptor(reflector));
   app.useGlobalFilters(
-    new NotfoundFilterFilter(),
-    new ValidationExceptionFilter(),
+    new GlobalHttpExceptionFilter()
   );
   app.useGlobalPipes(
     new ValidationPipe({

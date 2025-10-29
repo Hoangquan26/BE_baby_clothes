@@ -11,26 +11,13 @@ import { LoginAuthDTO } from './dto/login-auth.dto';
 import { RegisterAuthDTO } from './dto/register-auth.dto';
 import { UserService } from 'src/user/user.service';
 import { AUTH_PAYLOAD_SELECT } from './auth.constant';
-import { SessionService } from './session.service';
+import { SessionService } from '../user-session/user-session.service';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { GetUserInfoDTO } from './dto/get-user-info.dto';
+import { LoginSuccessResponseDto } from './dto/login-success-response.dto';
 import { randomUUID } from 'crypto';
 
-export type LoginSuccessResponse = {
-  tokenType: 'Bearer';
-  accessToken: string;
-  refreshToken?: string;
-  expiresIn: JwtSignOptions['expiresIn'];
-  refreshTokenExpiresIn?: JwtSignOptions['expiresIn'];
-  sessionId?: string;
-  sessionExpiresAt?: string;
-  user: {
-    id: string;
-    email: string;
-    username: string | null;
-    lastLoginAt: string | null;
-  };
-};
+export type LoginSuccessResponse = LoginSuccessResponseDto;
 
 type LoginContext = {
   userAgent?: string | null;
@@ -103,9 +90,10 @@ export class AuthService {
       accessToken: tokens.accessToken,
       expiresIn: this.accessTokenExpiresIn,
       user: {
-        id: user.id,
+        sub: user.id,
         email: user.email,
         username: user.username ?? null,
+        fullName: user.fullName ?? null,
         lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
       },
     };
@@ -198,16 +186,16 @@ export class AuthService {
       sessionId: rotated.id,
       sessionExpiresAt: rotated.expiresAt.toISOString(),
       user: {
-        id: user.id,
+        sub: user.id,
         email: user.email,
         username: user.username ?? null,
+        fullName: user.fullName ?? null,
         lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
       },
     } satisfies LoginSuccessResponse;
   }
 
-  async getUserInfo(user: GetUserInfoDTO) {
-    const { sub: userId } = user;
+  async getUserInfo(user: GetUserInfoDTO): Promise<GetUserInfoDTO> {
     return user;
   }
 
