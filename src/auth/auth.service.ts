@@ -142,7 +142,9 @@ export class AuthService {
       username,
       passwordHash: hashedPassword,
     });
-    return createdUser;
+    return {
+      data: createdUser
+    }
   }
 
   async refreshToken(

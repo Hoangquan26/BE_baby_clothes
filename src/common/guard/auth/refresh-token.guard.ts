@@ -9,7 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { AuthCookies, JwtAuthPayload } from 'src/auth/auth.constant';
 import { SessionService } from 'src/user-session/user-session.service';
-import { extractSessionId } from 'src/common/utils/request.util';
+import { extractSessionId } from 'src/common/utils/http.util';
 import { UserService } from 'src/user/user.service';
 
 @Injectable()

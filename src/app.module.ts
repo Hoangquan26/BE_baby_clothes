@@ -15,6 +15,8 @@ import { UserRoleModule } from './user-role/user-role.module';
 import { UserSessionModule } from './user-session/user-session.module';
 import { RequestIdMiddleware } from './common/middlewares/request-id.middleware/request-id.middleware.middleware';
 import { JwtModule, JwtModuleOptions, JwtSignOptions } from '@nestjs/jwt';
+import { VietnamLocationModule } from './vietnam-location/vietnam-location.module';
+import { CategoryModule } from './category/category.module';
 @Module({
   imports: [
     AuthModule,
@@ -39,6 +41,8 @@ import { JwtModule, JwtModuleOptions, JwtSignOptions } from '@nestjs/jwt';
     AddressModule,
     UserRoleModule,
     UserSessionModule,
+    VietnamLocationModule,
+    CategoryModule,
 
   ],
   controllers: [AppController],

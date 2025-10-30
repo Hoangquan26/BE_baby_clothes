@@ -81,24 +81,14 @@ export class AuthController {
   @ApiBody({ type: RegisterAuthDTO })
   @ApiCreatedResponse({ description: 'Account created successfully.', type: SafeUserDto })
   @ApiBadRequestResponse({ description: 'Invalid registration data or account already exists.' })
-  async register(@Body() registerAuthDTO: RegisterAuthDTO): Promise<SafeUserDto> {
+  async register(@Body() registerAuthDTO: RegisterAuthDTO){
     this.logger.log(
       `Register attempt for ${registerAuthDTO.username} ${formatMeta({
         email: registerAuthDTO.email,
       })}`,
     );
     const createdUser = await this.authService.register(registerAuthDTO);
-    return {
-      ...createdUser,
-      createdAt:
-        createdUser.createdAt instanceof Date
-          ? createdUser.createdAt.toISOString()
-          : createdUser.createdAt,
-      updatedAt:
-        createdUser.updatedAt instanceof Date
-          ? createdUser.updatedAt.toISOString()
-          : createdUser.updatedAt,
-    };
+    return createdUser
   }
 
   @Post('refresh')

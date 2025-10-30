@@ -1,4 +1,5 @@
 import { Request } from "express";
+import { User } from "generated/prisma";
 import { AuthCookies } from "src/auth/auth.constant";
 
 export function extractTokenFromHeader(request: Request): string | null {
@@ -26,4 +27,9 @@ export function extractSessionId(request: Request): string | null {
   }
 
   return null;
+}
+
+
+export function extractUserFromRequest(request: any) : Partial<User> {
+  return request.user
 }

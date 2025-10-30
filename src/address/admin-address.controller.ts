@@ -16,7 +16,7 @@ export class AdminAddressController {
   @Permissions('user.read.any')
   @ApiOperation({ summary: 'Admin: danh sách địa chỉ user' })
   listAddresses(@Param('userId') userId: string, @Query() query: any) {
-    return this.addressService.listAddressesForAdmin(userId, query);
+    // return this.addressService.listAddressesForAdmin(userId, query);
   }
 
   @Get(':addressId')
@@ -26,48 +26,48 @@ export class AdminAddressController {
     @Param('userId') userId: string,
     @Param('addressId') addressId: string,
   ) {
-    return this.addressService.getAddressDetailForAdmin(userId, addressId);
+    // return this.addressService.getAddressDetailForAdmin(userId, addressId);
   }
 
   @Post()
   @Permissions('user.update.any')
-  @ApiOperation({ summary: 'Admin: t?o d?a ch? m?i cho user' })
+  @ApiOperation({ summary: 'Admin: tạo địa chỉ mới cho user' })
   createAddress(
     @Param('userId') userId: string,
     @Body() payload: any,
   ) {
-    return this.addressService.createAddressForAdmin(userId, payload);
+    // return this.addressService.createAddressForAdmin(userId, payload);
   }
 
   @Patch(':addressId')
   @Permissions('user.update.any')
-  @ApiOperation({ summary: 'Admin: c?p nh?t d?a ch?' })
+  @ApiOperation({ summary: 'Admin: cập nhật địa chỉ' })
   updateAddress(
     @Param('userId') userId: string,
     @Param('addressId') addressId: string,
     @Body() payload: any,
   ) {
-    return this.addressService.updateAddressForAdmin(userId, addressId, payload);
+    // return this.addressService.updateAddressForAdmin(userId, addressId, payload);
   }
 
   @Delete(':addressId')
   @Permissions('user.update.any')
-  @ApiOperation({ summary: 'Admin: x�a d?a ch?' })
+  @ApiOperation({ summary: 'Admin: xóa địa chỉ' })
   deleteAddress(
     @Param('userId') userId: string,
     @Param('addressId') addressId: string,
   ) {
-    return this.addressService.deleteAddressForAdmin(userId, addressId);
+    // return this.addressService.deleteAddressForAdmin(userId, addressId);
   }
 
   @Patch(':addressId/default')
   @Permissions('user.update.any')
-  @ApiOperation({ summary: 'Admin: d?t d?a ch? l�m m?c d?nh' })
+  @ApiOperation({ summary: 'Admin: đặt địa chỉ mặc định' })
   setDefault(
     @Param('userId') userId: string,
     @Param('addressId') addressId: string,
     @Body() payload: { type: 'shipping' | 'billing' | 'both' },
   ) {
-    return this.addressService.setDefaultAddressForAdmin(userId, addressId, payload);
+    // return this.addressService.setDefaultAddressForAdmin(userId, addressId, payload);
   }
 }

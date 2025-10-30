@@ -9,7 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
 import { UserService } from 'src/user/user.service';
 import {  JwtAuthPayload } from 'src/auth/auth.constant';
-import { extractTokenFromHeader } from 'src/common/utils/request.util';
+import { extractTokenFromHeader } from 'src/common/utils/http.util';
 
 
 @Injectable()

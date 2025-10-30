@@ -8,6 +8,10 @@
       {
         "include": "../generated/**/*",
         "outDir": "./dist/generated"
+      },
+      {
+        "include": "../src/vietnam-location/data/**/*.json",
+        "outDir": "./dist/src"
       }
     ],
     "watchAssets": true
