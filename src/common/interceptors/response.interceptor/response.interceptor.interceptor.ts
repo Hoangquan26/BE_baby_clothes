@@ -6,10 +6,10 @@ import { OkResponse } from 'src/common/http/response.type';
 
 @Injectable()
 export class ResponseInterceptorInterceptor implements NestInterceptor {
-  constructor(private refector: Reflector) {}
+  constructor(private reflector: Reflector) {}
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const req = context.switchToHttp().getRequest();
-    const isNoWrap = this.refector.get<boolean>(NO_WRAP_KEY, context.getHandler())
+    const isNoWrap = this.reflector.get<boolean>(NO_WRAP_KEY, context.getHandler())
     const requestId = req.id || req.headers['x-request-id'];
     return next.handle().pipe((
       map((body) => {

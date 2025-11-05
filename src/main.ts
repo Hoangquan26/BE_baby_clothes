@@ -10,6 +10,7 @@ import * as compression from 'compression'
 import helmet from 'helmet'
 import { GlobalHttpExceptionFilter } from './common/filters/http-exception.filter/http-exception.filter.filter';
 import { ResponseInterceptorInterceptor } from './common/interceptors/response.interceptor/response.interceptor.interceptor';
+import { urlencoded } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -32,10 +33,10 @@ async function bootstrap() {
       },
     }),
   );
-
+  app.use(compression())
+  app.use(urlencoded({ extended: true }));
   app.use(cookieParser());
   app.use(helmet())
-  app.use(compression())
   // app.enableCors({
   //   credentials: true,
   // });

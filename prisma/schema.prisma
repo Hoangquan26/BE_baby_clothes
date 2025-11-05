@@ -72,7 +72,7 @@ enum NotificationPriority {
 // SYSTEM / RBAC / SESSIONS
 // ==============================
 model User {
-  id           String    @id @db.VarChar(26) @default(cuid())
+  id           String    @id @default(cuid()) @db.VarChar(26)
   email        String    @unique @db.VarChar(255)
   username     String?   @unique @db.VarChar(50)
   passwordHash String    @db.VarChar(255)
@@ -169,7 +169,7 @@ model Address {
   fullName          String   @db.VarChar(255)
   phone             String   @db.VarChar(32)
   province          String   @db.VarChar(128)
-  ward              String  @db.VarChar(128)
+  ward              String   @db.VarChar(128)
   addressLine1      String   @db.VarChar(255)
   addressLine2      String?  @db.VarChar(255)
   postalCode        String?  @db.VarChar(32)
@@ -204,15 +204,16 @@ model Media {
 // CATALOG: CATEGORY → PRODUCT → VARIANT
 // ==============================
 model Category {
-  id          Int      @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   parentId    Int?
-  slug        String   @unique @db.VarChar(128)
-  name        String   @db.VarChar(255)
+  slug        String    @unique @db.VarChar(128)
+  name        String    @db.VarChar(255)
   description String?
-  position    Int      @default(0)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  position    Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
 
   parent   Category?  @relation("CategoryToParent", fields: [parentId], references: [id], onDelete: SetNull)
   children Category[] @relation("CategoryToParent")
@@ -223,7 +224,7 @@ model Category {
 }
 
 model Product {
-  id           String    @id @db.VarChar(26)
+  id           String    @id @default(cuid()) @db.VarChar(26)
   sku          String?   @unique @db.VarChar(64)
   slug         String    @unique @db.VarChar(160)
   name         String    @db.VarChar(255)
@@ -288,7 +289,7 @@ model OptionValue {
 }
 
 model ProductVariant {
-  id             String   @id @db.VarChar(26)
+  id             String   @id @default(cuid()) @db.VarChar(26)
   productId      String   @db.VarChar(26)
   sku            String   @unique @db.VarChar(64)
   barcode        String?  @db.VarChar(64)
@@ -310,7 +311,7 @@ model ProductVariant {
 }
 
 model VariantOptionValue {
-  variantId     String @db.VarChar(26)
+  variantId     String @default(cuid()) @db.VarChar(26)
   optionId      Int
   optionValueId Int
 
@@ -373,7 +374,7 @@ model StockMove {
 // CART & WISHLIST
 // ==============================
 model Cart {
-  id        String   @id @db.VarChar(26)
+  id        String   @id @default(cuid()) @db.VarChar(26)
   userId    String?  @db.VarChar(26)
   currency  String   @default("VND") @db.Char(3)
   createdAt DateTime @default(now())
@@ -402,7 +403,7 @@ model CartItem {
 }
 
 model Wishlist {
-  id        String   @id @db.VarChar(26)
+  id        String   @id @default(cuid()) @db.VarChar(26)
   userId    String   @db.VarChar(26)
   name      String   @default("Default") @db.VarChar(255)
   isPublic  Boolean  @default(false)
@@ -415,7 +416,7 @@ model Wishlist {
 }
 
 model WishlistItem {
-  wishlistId String   @db.VarChar(26)
+  wishlistId String   @default(cuid()) @db.VarChar(26)
   productId  String   @db.VarChar(26)
   addedAt    DateTime @default(now())
 
@@ -430,7 +431,7 @@ model WishlistItem {
 // COUPON / PROMOTION
 // ==============================
 model Coupon {
-  id            String     @id @db.VarChar(26)
+  id            String     @id @default(cuid()) @db.VarChar(26)
   code          String     @unique @db.VarChar(64)
   type          CouponType
   value         Decimal    @db.Decimal(18, 2)
@@ -469,7 +470,7 @@ model CouponRedemption {
 // ORDER / PAYMENT / SHIPMENT
 // ==============================
 model Order {
-  id                String            @id @db.VarChar(26)
+  id                String            @id @default(cuid()) @db.VarChar(26)
   userId            String?           @db.VarChar(26)
   status            OrderStatus       @default(PENDING)
   paymentStatus     PaymentStatus     @default(UNPAID)
@@ -545,7 +546,7 @@ model OrderItem {
 }
 
 model Payment {
-  id             String    @id @db.VarChar(26)
+  id             String    @id @default(cuid()) @db.VarChar(26)
   orderId        String    @db.VarChar(26)
   provider       String    @db.VarChar(64) // VNPAY, MOMO, COD, STRIPE...
   method         String    @db.VarChar(64) // CARD, BANK_TRANSFER, COD...
@@ -565,7 +566,7 @@ model Payment {
 }
 
 model Shipment {
-  id          String         @id @db.VarChar(26)
+  id          String         @id @default(cuid()) @db.VarChar(26)
   orderId     String         @db.VarChar(26)
   carrier     String         @db.VarChar(64) // GHN, GHTK...
   service     String?        @db.VarChar(128)
@@ -642,7 +643,7 @@ model AuditLog {
 // track trạng thái gửi/đọc theo từng user, đa kênh (WEB/EMAIL/PUSH) và độ ưu tiên.
 
 model Notification {
-  id          String               @id @db.VarChar(26)
+  id          String               @id @default(cuid()) @db.VarChar(26)
   title       String               @db.VarChar(255)
   body        String?
   channel     NotificationChannel  @default(WEB)

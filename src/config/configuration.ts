@@ -25,5 +25,8 @@ export default () => ({
     swagger: {
       enabled: (process.env.SWAGGER_ENABLED ?? 'true').toLowerCase() !== 'false',
       path: process.env.SWAGGER_PATH ?? 'docs',
+    },
+    redis: {
+      url: process.env.REDIS_URL ?? 'redis://localhost:6379',
     }
   });

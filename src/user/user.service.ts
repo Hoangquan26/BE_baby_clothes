@@ -18,7 +18,7 @@ export class UserService {
   constructor(
     private prisma: PrismaService,
     private userRole: UserRoleService
-  ) {}
+  ) { }
   private readonly defaultRegisterRole = UserRoleIDS.CUSTOMER
   private readonly safeUserSelect: Prisma.UserSelect = Object.freeze({
     id: true,
@@ -75,7 +75,7 @@ export class UserService {
     const foundUser = await this.prisma.user.findFirst({
       where: {
         OR: [{ email }, { username }],
-      }, 
+      },
       select: this.safeUserSelect,
     });
 
@@ -160,5 +160,36 @@ export class UserService {
         cause: error,
       });
     }
+  }
+
+  async getPermisionsForUser(userId: string) {
+    const userRoles = await this.prisma.userRole.findMany({
+      where: { userId },
+      include: {
+        role: {
+          include: {
+            permissions: {
+              include: {
+                permission: true,
+              }
+            }
+          },
+        },
+      },
+    });
+
+    if (!userRoles || userRoles.length === 0) {
+      return [];
+    }
+
+    const permissionsSet = new Set<string>();
+
+    for (const userRole of userRoles) {
+      for (const rolePermission of userRole.role.permissions) {
+        permissionsSet.add(rolePermission.permission.code);
+      }
+    }
+
+    return Array.from(permissionsSet);
   }
 }

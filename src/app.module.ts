@@ -9,7 +9,7 @@ import { ApplicationLogger } from './common/logger/logger';
 import { PrismaModule } from './prisma/prisma.module';
 import { AddressModule } from './address/address.module';
 import { ThrottlerModule, ThrottlerModuleOptions } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { UserRoleModule } from './user-role/user-role.module';
 import { UserSessionModule } from './user-session/user-session.module';
@@ -17,6 +17,10 @@ import { RequestIdMiddleware } from './common/middlewares/request-id.middleware/
 import { JwtModule, JwtModuleOptions, JwtSignOptions } from '@nestjs/jwt';
 import { VietnamLocationModule } from './vietnam-location/vietnam-location.module';
 import { CategoryModule } from './category/category.module';
+import { RedisModule } from './redis/redis.module';
+import { ResponseInterceptorInterceptor } from './common/interceptors/response.interceptor/response.interceptor.interceptor';
+import { ProductModule } from './product/product.module';
+import { MediaModule } from './media/media.module';
 @Module({
   imports: [
     AuthModule,
@@ -43,6 +47,9 @@ import { CategoryModule } from './category/category.module';
     UserSessionModule,
     VietnamLocationModule,
     CategoryModule,
+    RedisModule,
+    ProductModule,
+    MediaModule,
 
   ],
   controllers: [AppController],
@@ -53,6 +60,10 @@ import { CategoryModule } from './category/category.module';
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ResponseInterceptorInterceptor,
+    }
   ],
 })
 export class AppModule implements NestModule {
